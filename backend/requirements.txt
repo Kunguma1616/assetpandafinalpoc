@@ -1,0 +1,14 @@
+# Web Framework and Utilities
+Flask
+Flask-CORS
+python-dotenv
+
+# AI and API Client
+groq
+
+# PDF Generation
+reportlab
+
+# Optional but Recommended for full image support (especially non-JPG)
+# ReportLab often relies on Pillow for image handling
+Pillow
