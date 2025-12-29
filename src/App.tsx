@@ -11,11 +11,13 @@ import Auth from "./pages/Auth";
 import Upload from "./pages/Upload";
 import Dashboard from "./pages/Dashboard";
 import Assets from "./pages/Assets";
-import Tools from "./pages/Tools";
+
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 import Analytics from "./pages/Analytics";
-import AssetDetails from "./pages/AssetDetails";   // ✅ NEW PAGE
+import AssetDetails from "./pages/AssetDetails";
+import SalesforceAssets from "./pages/SalesforceAssets"; // Ensure this file exists now!
+
 
 const queryClient = new QueryClient();
 
@@ -25,7 +27,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center gradient-page">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
@@ -45,7 +47,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center gradient-page">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
@@ -80,7 +82,7 @@ const App = () => (
             {/* ROOT REDIRECT */}
             <Route path="/" element={<Navigate to="/auth" replace />} />
 
-            {/* HOME */}
+            {/* PROTECTED ROUTES */}
             <Route
               path="/home"
               element={
@@ -90,7 +92,6 @@ const App = () => (
               }
             />
 
-            {/* DASHBOARD */}
             <Route
               path="/dashboard"
               element={
@@ -100,7 +101,6 @@ const App = () => (
               }
             />
 
-            {/* UPLOAD */}
             <Route
               path="/upload"
               element={
@@ -110,7 +110,6 @@ const App = () => (
               }
             />
 
-            {/* ASSET LIST */}
             <Route
               path="/assets"
               element={
@@ -120,7 +119,6 @@ const App = () => (
               }
             />
 
-            {/* ⭐ NEW: ASSET DETAILS PAGE */}
             <Route
               path="/asset/:id"
               element={
@@ -130,17 +128,8 @@ const App = () => (
               }
             />
 
-            {/* TOOLS */}
-            <Route
-              path="/tools"
-              element={
-                <ProtectedRoute>
-                  <Tools />
-                </ProtectedRoute>
-              }
-            />
+            
 
-            {/* ANALYTICS */}
             <Route
               path="/analytics"
               element={
@@ -149,6 +138,17 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/salesforce-assets"
+              element={
+                <ProtectedRoute>
+                  <SalesforceAssets />
+                </ProtectedRoute>
+              }
+            />
+
+            
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
