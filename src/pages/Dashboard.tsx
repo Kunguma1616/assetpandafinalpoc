@@ -19,7 +19,7 @@ const generateMockAssets = () => {
   const statuses = ['active', 'maintenance', 'retired', 'pending'];
   const conditions = ['Good', 'Fair', 'Poor'];
   
-  return Array.from({ length: 25 }, (_, i) => ({
+  return Array.from({ length: 83 }, (_, i) => ({
     id: `asset-${i + 1}`,
     category: categories[Math.floor(Math.random() * categories.length)],
     status: statuses[Math.floor(Math.random() * statuses.length)],
@@ -207,9 +207,11 @@ const Dashboard = () => {
               <Button onClick={() => navigate('/assets')} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10 font-bold px-4 border-2">
                 <ListOrdered className="mr-2 h-4 w-4" /> View Portfolio
               </Button>
-              <Button onClick={() => navigate('/salesforce-assets')} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10 font-bold px-4 border-2">
-                <Database className="mr-2 h-4 w-4" /> Salesforce
+              <Button onClick={() => navigate('/asset-history')} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10 font-bold px-4 border-2">
+                <Activity className="mr-2 h-4 w-4" /> Asset History
               </Button>
+              
+            
               <Button onClick={handleSignOut} variant="destructive" className="font-bold px-6 shadow-lg border-2 border-white/10">
                 <LogOut className="mr-2 h-4 w-4" /> Sign Out
               </Button>

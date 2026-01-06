@@ -6,20 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-import { Search, Upload, LayoutDashboard, FileDown, Trash2 } from "lucide-react";
-import heroWarehouse from "@/assets/hero-warehouse.jpg";
+import { Search, Upload, LayoutDashboard, FileDown, Trash2, Cloud } from "lucide-react";
 
 interface Asset {
   id: number;
   engineer_name: string;
   engineer_category: string;
   asset_name: string;
+  asset_type?: string;
   manufacturer?: string;
   model_number?: string;
   condition?: string;
   visual_description?: string;
   category?: string;
   image_base64: string;
+  stored_location?: string;
   uploaded_at: string;
 }
 
@@ -27,7 +28,7 @@ const Assets = () => {
   const navigate = useNavigate();
 
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]); 
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [pdfGenerating, setPdfGenerating] = useState(false);
@@ -44,15 +45,13 @@ const Assets = () => {
       const res = await fetch("http://localhost:5000/assets");
       const data = await res.json();
       console.log("✅ Loaded assets:", data);
-      
-      // Check for duplicate IDs and warn
+
       const ids = data.map((a: Asset) => a.id);
       const duplicates = ids.filter((id: number, index: number) => ids.indexOf(id) !== index);
       if (duplicates.length > 0) {
         console.warn("⚠️ WARNING: Duplicate asset IDs detected:", duplicates);
-        console.warn("This will cause React key errors. Please fix your database!");
       }
-      
+
       setAssets(data);
       setFilteredAssets(data);
     } catch (err) {
@@ -68,13 +67,15 @@ const Assets = () => {
     const term = searchTerm.toLowerCase();
     const filtered = assets.filter((a) => {
       const name = a.asset_name?.toLowerCase() || "";
+      const assetType = a.asset_type?.toLowerCase() || "";
       const engineer = a.engineer_name?.toLowerCase() || "";
       const model = a.model_number?.toLowerCase() || "";
       const manufacturer = a.manufacturer?.toLowerCase() || "";
       const category = a.category?.toLowerCase() || "";
-      
+
       return (
         name.includes(term) ||
+        assetType.includes(term) ||
         engineer.includes(term) ||
         model.includes(term) ||
         manufacturer.includes(term) ||
@@ -89,7 +90,7 @@ const Assets = () => {
   // -----------------------------------------------
   const deleteAsset = async (id: number) => {
     if (!confirm("Delete this asset?")) return;
-    
+
     try {
       await fetch(`http://localhost:5000/assets/${id}`, { method: "DELETE" });
       loadAssets();
@@ -103,14 +104,13 @@ const Assets = () => {
   // -----------------------------------------------
   const viewAssetDetail = (id: number) => {
     console.log("🔍 Attempting to view asset:", id);
-    
-    const asset = assets.find(a => a.id === id);
+
+    const asset = assets.find((a) => a.id === id);
     if (asset) {
-      alert(`Asset Details:\n\nName: ${asset.asset_name}\nManufacturer: ${asset.manufacturer || 'N/A'}\nModel: ${asset.model_number || 'N/A'}\nCondition: ${asset.condition || 'N/A'}\nCategory: ${asset.category || 'N/A'}\nEngineer: ${asset.engineer_name}\nTeam: ${asset.engineer_category}\n\nDescription: ${asset.visual_description || 'N/A'}`);
+      alert(
+        `Asset Details:\n\nName: ${asset.asset_name}\nAsset Type: ${asset.asset_type || "N/A"}\nManufacturer: ${asset.manufacturer || "N/A"}\nModel: ${asset.model_number || "N/A"}\nCondition: ${asset.condition || "N/A"}\nCategory: ${asset.category || "N/A"}\nUser: ${asset.engineer_name}\nTeam: ${asset.engineer_category}\n\nDescription: ${asset.visual_description || "N/A"}`
+      );
     }
-    
-    // UNCOMMENT when route is created:
-    // navigate(`/assets/${id}`);
   };
 
   // -----------------------------------------------
@@ -127,7 +127,7 @@ const Assets = () => {
   };
 
   // -----------------------------------------------
-  // PDF GENERATION - FIXED FOR LARGE PAYLOADS
+  // PDF GENERATION
   // -----------------------------------------------
   const generatePDF = async () => {
     const assetsToReport = filteredAssets;
@@ -140,12 +140,10 @@ const Assets = () => {
     setPdfGenerating(true);
 
     try {
-      // Option 1: Send asset IDs only (recommended)
-      // Backend fetches images from database
       const payload = {
         engineer_name: assetsToReport[0].engineer_name,
         engineer_category: assetsToReport[0].engineer_category,
-        asset_ids: assetsToReport.map(a => a.id)
+        asset_ids: assetsToReport.map((a) => a.id),
       };
 
       const res = await fetch("http://localhost:5000/generate-pdf", {
@@ -158,7 +156,7 @@ const Assets = () => {
 
       if (!res.ok) {
         if (res.status === 413) {
-          throw new Error("Request too large. Try generating report with fewer assets or use the alternative method below.");
+          throw new Error("Request too large. Try generating report with fewer assets.");
         }
         throw new Error(`PDF generation failed: ${res.status} ${res.statusText}`);
       }
@@ -170,107 +168,40 @@ const Assets = () => {
       link.download = `${assetsToReport[0].engineer_name}_Asset_Report.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-      
+
       alert("PDF generated successfully!");
     } catch (err) {
       console.error("❌ PDF generation error:", err);
-      
-      // If still getting 413 error, try alternative method
-      if (err instanceof Error && err.message.includes("413")) {
-        const tryAlternative = confirm(
-          "The report is too large to generate all at once.\n\n" +
-          "Would you like to try an alternative method?\n" +
-          "- Split into smaller batches\n" +
-          "- Reduce image quality\n" +
-          "- Select fewer assets"
-        );
-        
-        if (tryAlternative) {
-          await generatePDFAlternative(assetsToReport);
-        }
-      } else {
-        alert(`Failed to generate PDF: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      }
+      alert(`Failed to generate PDF: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setPdfGenerating(false);
     }
   };
 
-  // -----------------------------------------------
-  // ALTERNATIVE: Generate PDF with compressed images
-  // -----------------------------------------------
-  const generatePDFAlternative = async (assetsToReport: Asset[]) => {
-    try {
-      // Send request without images, let backend fetch from DB
-      const formData = new FormData();
-      formData.append("engineer_name", assetsToReport[0].engineer_name);
-      formData.append("engineer_category", assetsToReport[0].engineer_category);
-      
-      // Just send metadata and IDs
-      const payload = assetsToReport.map((a) => ({
-        id: a.id,
-        filename: a.asset_name,
-        metadata: {
-          Manufacturer: a.manufacturer,
-          Model: a.model_number,
-          Condition: a.condition,
-          Category: a.category,
-          Description: a.visual_description,
-        },
-      }));
-      
-      formData.append("assets_json", JSON.stringify(payload));
-
-      const res = await fetch("http://localhost:5000/generate-pdf-lite", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error(`Alternative PDF generation failed: ${res.status}`);
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${assetsToReport[0].engineer_name}_Asset_Report_Compressed.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      
-      alert("Compressed PDF generated successfully!");
-    } catch (err) {
-      console.error("❌ Alternative PDF generation error:", err);
-      alert("Failed to generate compressed PDF. Try selecting fewer assets.");
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl font-semibold">Loading assets...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading assets...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* HEADER */}
-      <div className="relative h-48 bg-gradient-to-r from-blue-600 to-blue-800 overflow-hidden">
-        <img
-          src={heroWarehouse}
-          className="absolute inset-0 w-full h-full object-cover opacity-20"
-          alt="Warehouse"
-        />
-        <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center">
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/10 flex items-center justify-center rounded-xl border border-white/20">
-                <img src="/aspectlogo.jpeg" className="w-full h-full object-contain p-1" alt="Logo" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center">
+                <Cloud className="h-8 w-8 text-blue-400" />
               </div>
               <div>
-                <h1 className="text-3xl text-white font-bold">Assets Inventory</h1>
-                <p className="text-white/80">{assets.length} total assets</p>
+                <h1 className="text-2xl font-bold">Assets Inventory</h1>
+                <p className="text-slate-300 text-sm">{assets.length} total assets</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -286,23 +217,19 @@ const Assets = () => {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6">
         {/* SEARCH & PDF */}
-        <div className="mb-6 flex gap-4 items-center justify-between">
-          <div className="flex gap-2 items-center max-w-md flex-1">
-            <Search className="text-gray-400" />
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name, model, manufacturer, category..."
+              placeholder="Search by name, asset type, user, manufacturer..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
+              className="pl-10"
             />
           </div>
-          <Button
-            className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={generatePDF}
-            disabled={filteredAssets.length === 0 || pdfGenerating}
-          >
+          <Button onClick={generatePDF} disabled={pdfGenerating} variant="outline">
             <FileDown className="mr-2 h-4 w-4" />
             {pdfGenerating ? "Generating..." : `Download PDF Report (${filteredAssets.length})`}
           </Button>
@@ -310,8 +237,8 @@ const Assets = () => {
 
         {/* ASSET GRID */}
         {filteredAssets.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <p className="text-xl">No assets found matching your search criteria.</p>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No assets found matching your search criteria.</p>
             <Button onClick={() => navigate("/upload")} className="mt-4">
               Upload New Asset
             </Button>
@@ -319,19 +246,19 @@ const Assets = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAssets.map((asset) => (
-              <Card 
-                key={`asset-${asset.id}-${asset.uploaded_at}`}
-                className="shadow-md hover:shadow-xl transition-all cursor-pointer"
+              <Card
+                key={asset.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => viewAssetDetail(asset.id)}
               >
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{asset.asset_name}</CardTitle>
+                    <CardTitle className="text-lg font-semibold">{asset.asset_name}</CardTitle>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={(e) => {
-                        e.stopPropagation(); 
+                        e.stopPropagation();
                         deleteAsset(asset.id);
                       }}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -350,53 +277,72 @@ const Assets = () => {
                   {/* IMAGE */}
                   {asset.image_base64 ? (
                     <img
-                      src={`data:image/jpeg;base64,${asset.image_base64}`}
-                      className="w-full h-48 object-cover rounded-lg border"
+                      src={asset.image_base64.startsWith('data:') ? asset.image_base64 : `data:image/jpeg;base64,${asset.image_base64}`}
                       alt={asset.asset_name}
+                      className="w-full h-48 object-cover rounded-md border"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <span className="text-gray-400">No Image</span>
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`w-full h-48 bg-muted rounded-md flex items-center justify-center ${asset.image_base64 ? 'hidden' : ''}`}>
+                    <span className="text-muted-foreground">No Image</span>
+                  </div>
 
                   {/* METADATA */}
-                  <div className="text-sm space-y-1.5 border-t pt-3">
+                  <div className="space-y-1.5 text-sm">
+                    {/* ASSET NAME */}
+                    <p className="text-foreground">
+                      <span className="font-semibold text-blue-600 underline">Asset Name:</span> {asset.asset_name}
+                    </p>
+                    {/* ASSET TYPE */}
+                    <p className="text-foreground">
+                      <span className="font-semibold text-blue-600 underline">Asset Type:</span> {asset.asset_type || 'N/A'}
+                    </p>
+                    {/* USER (Engineer Name) */}
+                    <p className="text-foreground">
+                      <span className="font-semibold text-blue-600 underline">User:</span> {asset.engineer_name}
+                    </p>
                     {asset.manufacturer && (
-                      <p>
-                        <strong className="text-gray-600">Manufacturer:</strong> {asset.manufacturer}
+                      <p className="text-foreground">
+                        <span className="font-semibold">Manufacturer:</span> {asset.manufacturer}
                       </p>
                     )}
                     {asset.model_number && (
-                      <p>
-                        <strong className="text-gray-600">Model:</strong> {asset.model_number}
+                      <p className="text-foreground">
+                        <span className="font-semibold">Model:</span> {asset.model_number}
                       </p>
                     )}
                     {asset.category && (
-                      <p>
-                        <strong className="text-gray-600">Category:</strong> {asset.category}
+                      <p className="text-foreground">
+                        <span className="font-semibold">Category:</span> {asset.category}
                       </p>
                     )}
-                    <p>
-                      <strong className="text-gray-600">Engineer:</strong> {asset.engineer_name}
+                    <p className="text-foreground">
+                      <span className="font-semibold">Team:</span> {asset.engineer_category}
                     </p>
-                    <p>
-                      <strong className="text-gray-600">Team:</strong> {asset.engineer_category}
-                    </p>
+                    {/* STORAGE LOCATION */}
+                    {asset.stored_location && (
+                      <p className="text-foreground flex items-center gap-1">
+                        <Cloud className="h-3 w-3" />
+                        <span className="font-semibold">Stored At:</span> {asset.stored_location}
+                      </p>
+                    )}
                   </div>
 
                   {/* VISUAL DESCRIPTION */}
                   {asset.visual_description && (
-                    <div className="border-t pt-3">
-                      <p className="text-xs text-gray-600 font-semibold mb-1">Description:</p>
-                      <p className="text-xs text-gray-500 leading-relaxed">
+                    <div className="pt-2 border-t">
+                      <p className="font-semibold text-sm">Description:</p>
+                      <p className="text-sm text-muted-foreground line-clamp-4">
                         {asset.visual_description}
                       </p>
                     </div>
                   )}
 
                   {/* UPLOAD DATE */}
-                  <p className="text-xs text-gray-400 border-t pt-2">
+                  <p className="text-xs text-muted-foreground pt-2">
                     Added: {new Date(asset.uploaded_at).toLocaleDateString()}
                   </p>
                 </CardContent>

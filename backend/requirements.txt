@@ -12,3 +12,4 @@ reportlab
 # Optional but Recommended for full image support (especially non-JPG)
 # ReportLab often relies on Pillow for image handling
 Pillow
+simple-salesforce

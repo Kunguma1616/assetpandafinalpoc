@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Package, CheckCircle, XCircle, PoundSterling, Wrench, Star, Search, Filter,
   ArrowUpDown, ArrowUp, ArrowDown, Calendar, MapPin, User, Building, Tag, 
-  AlertTriangle, Loader2, ArrowLeft
+  AlertTriangle, Loader2, ArrowLeft, Plus
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 // ============ TYPES ============
 interface Asset {
@@ -123,8 +124,18 @@ export default function SalesforceAssets() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterConfig>({ search: '', assetType: 'all', availability: 'all' });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' });
+
+  // Add Asset Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    price: '',
+    date: '',
+    time: '',
+    assetType: 'General'
+  });
 
   // 1. AUTO-LOAD EFFECT
   useEffect(() => {
@@ -172,26 +183,49 @@ export default function SalesforceAssets() {
     available: assets.filter(a => a.isAvailable).length,
     unavailable: assets.filter(a => !a.isAvailable).length,
     value: assets.reduce((sum, a) => sum + (a.price || 0), 0),
-    maint: assets.reduce((sum, a) => sum + (a.maintenanceCost || 0), 0),
   }), [assets]);
 
-  // 3. UI HELPERS
+  // 3. UI HANDLERS
   const handleSort = (key: keyof Asset) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
   const formatCurrency = (val: number) => val ? `£${val.toLocaleString()}` : '-';
+
+  const handleAddNewAsset = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEntry: Asset = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: formData.name,
+      assetCode: `NEW-${Math.floor(1000 + Math.random() * 9000)}`,
+      accountName: 'Internal',
+      assetType: formData.assetType,
+      assetLevel: 1,
+      assignedDate: formData.date,
+      city: 'London',
+      country: 'UK',
+      description: `Added via tool on ${formData.date} at ${formData.time}`,
+      consequenceOfFailure: 'Medium',
+      equipmentOwner: 'System Admin',
+      installDate: formData.date,
+      isAvailable: true,
+      isClientAsset: false,
+      isSpecialized: false,
+      maintenanceCost: 0,
+      manufactureDate: null,
+      ownerName: 'Admin',
+      price: parseFloat(formData.price) || 0,
+      productCode: 'MANUAL-ENTRY',
+      usageEndDate: null,
+      postalCode: '',
+      address: '',
+    };
+
+    setAssets([newEntry, ...assets]);
+    setIsAddModalOpen(false);
+    setFormData({ name: '', price: '', date: '', time: '', assetType: 'General' });
+  };
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-slate-50">
       <div className="text-center"><Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" /><p className="font-medium text-slate-600">Loading Asset Master Data...</p></div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="flex h-screen items-center justify-center p-4">
-      <Card className="p-8 text-center max-w-md border-red-200 bg-red-50">
-        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-red-900 mb-2">Configuration Error</h2>
-        <p className="text-red-700">{error}</p>
-      </Card>
     </div>
   );
 
@@ -204,35 +238,33 @@ export default function SalesforceAssets() {
           <div className="relative z-10">
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-4">
-                {/* LOGO CONTAINER */}
                 <div className="bg-white p-1 rounded-xl w-16 h-16 flex items-center justify-center overflow-hidden shadow-inner">
-                   <img 
-                    src="/aspectlogo.jpeg" 
-                    alt="Company Logo" 
-                    className="w-full h-full object-contain" 
-                   />
+                   <img src="/aspectlogo.jpeg" alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Asset Salesfoces Database</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">Asset Salesforce Database</h1>
                   <p className="opacity-80 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     UK Asset Tracking (GBP)
                   </p>
                 </div>
               </div>
-              <Button onClick={() => navigate('/dashboard')} variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={() => setIsAddModalOpen(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-lg">
+                  <Plus className="mr-2 h-4 w-4" /> Add Asset Tool
+                </Button>
+                <Button onClick={() => navigate('/dashboard')} variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+                </Button>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatBox label="Total Assets" value={stats.total} />
               <StatBox label="Available" value={stats.available} color="text-emerald-400" />
-              <StatBox label="Total Value" value={formatCurrency(stats.value)} />
-              
+              <StatBox label="Total Portfolio Value" value={formatCurrency(stats.value)} />
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20" />
         </header>
 
         {/* FILTERS */}
@@ -245,10 +277,6 @@ export default function SalesforceAssets() {
             <Select value={filters.assetType} onValueChange={v => setFilters({...filters, assetType: v})}>
               <SelectTrigger className="w-40"><SelectValue placeholder="Type" /></SelectTrigger>
               <SelectContent>{assetTypes.map(t => <SelectItem key={t} value={t}>{t === 'all' ? 'All Types' : t}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={filters.availability} onValueChange={v => setFilters({...filters, availability: v})}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="available">Available</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent>
             </Select>
           </div>
         </div>
@@ -266,15 +294,15 @@ export default function SalesforceAssets() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white">
-              {sortedAssets.slice(0, 50).map(asset => (
+              {sortedAssets.map(asset => (
                 <TableRow key={asset.id} className="cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setSelectedAsset(asset)}>
                   <TableCell className="font-mono text-xs text-primary font-semibold">{asset.assetCode}</TableCell>
                   <TableCell className="font-medium">{asset.name}</TableCell>
                   <TableCell className="text-slate-500 text-sm">{asset.accountName}</TableCell>
                   <TableCell>
                     {asset.isAvailable ? 
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">Available</Badge> : 
-                      <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none">In Use</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-700 border-none">Available</Badge> : 
+                      <Badge className="bg-slate-100 text-slate-500 border-none">In Use</Badge>
                     }
                   </TableCell>
                   <TableCell className="font-medium">{formatCurrency(asset.price)}</TableCell>
@@ -282,13 +310,60 @@ export default function SalesforceAssets() {
               ))}
             </TableBody>
           </Table>
-          <div className="p-4 bg-slate-50 border-t text-center text-xs text-slate-500">
-            Showing top {Math.min(50, sortedAssets.length)} of {sortedAssets.length} filtered assets.
-          </div>
         </Card>
       </div>
 
-      {/* DETAIL DRAWER */}
+      {/* ADD ASSET MODAL */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Plus className="h-5 w-5 text-emerald-500" /> Add New Asset
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddNewAsset} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Asset Name</Label>
+              <Input id="name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Generator X1" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="price">Amount (GBP)</Label>
+              <div className="relative">
+                <PoundSterling className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input id="price" type="number" required className="pl-10" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="date">Date</Label>
+                <Input id="date" type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="time">Time</Label>
+                <Input id="time" type="time" required value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type">Asset Type</Label>
+              <Select value={formData.assetType} onValueChange={v => setFormData({...formData, assetType: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="General">General</SelectItem>
+                  <SelectItem value="Vehicle">Vehicle</SelectItem>
+                  <SelectItem value="IT Equipment">IT Equipment</SelectItem>
+                  <SelectItem value="Heavy Machinery">Heavy Machinery</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+              <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600">Save Asset</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* VIEW DETAIL DIALOG */}
       <Dialog open={!!selectedAsset} onOpenChange={() => setSelectedAsset(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -297,15 +372,13 @@ export default function SalesforceAssets() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-6 py-6">
             <DetailItem icon={Building} label="Account" value={selectedAsset?.accountName} />
-            <DetailItem icon={User} label="Equipment Owner" value={selectedAsset?.ownerName} />
+            <DetailItem icon={Calendar} label="Installation Date" value={selectedAsset?.installDate} />
             <DetailItem icon={Tag} label="Asset Type" value={selectedAsset?.assetType} />
-            <DetailItem icon={MapPin} label="Location" value={selectedAsset?.city} />
             <DetailItem icon={PoundSterling} label="Purchase Price" value={formatCurrency(selectedAsset?.price || 0)} />
-            <DetailItem icon={Wrench} label="Annual Maintenance" value={formatCurrency(selectedAsset?.maintenanceCost || 0)} />
           </div>
           {selectedAsset?.description && (
             <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Description</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Internal Note</p>
               <p className="text-sm text-slate-600 leading-relaxed">{selectedAsset.description}</p>
             </div>
           )}

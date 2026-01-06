@@ -11,12 +11,12 @@ import Auth from "./pages/Auth";
 import Upload from "./pages/Upload";
 import Dashboard from "./pages/Dashboard";
 import Assets from "./pages/Assets";
-
+import AssetHistory from "./pages/AssetHistory";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 import Analytics from "./pages/Analytics";
 import AssetDetails from "./pages/AssetDetails";
-import SalesforceAssets from "./pages/SalesforceAssets"; // Ensure this file exists now!
+import SalesforceAssets from "./pages/SalesforceAssets";
 
 
 const queryClient = new QueryClient();
@@ -128,7 +128,15 @@ const App = () => (
               }
             />
 
-            
+            {/* ADDED: Asset History Route */}
+            <Route
+              path="/asset-history"
+              element={
+                <ProtectedRoute>
+                  <AssetHistory />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/analytics"
@@ -147,8 +155,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
-            
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
