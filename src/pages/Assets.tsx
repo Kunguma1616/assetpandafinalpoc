@@ -42,7 +42,7 @@ const Assets = () => {
 
   const loadAssets = async () => {
     try {
-      const res = await fetch("http://localhost:5000/assets");
+      const res = await fetch("https://aivison-3.onrender.com/assets")
       const data = await res.json();
       console.log("✅ Loaded assets:", data);
 
@@ -92,7 +92,7 @@ const Assets = () => {
     if (!confirm("Delete this asset?")) return;
 
     try {
-      await fetch(`http://localhost:5000/assets/${id}`, { method: "DELETE" });
+      await fetch(`https://aivison-3.onrender.com/assets/${id}`, { method: "DELETE" });
       loadAssets();
     } catch (err) {
       console.error("❌ Delete failed:", err);
@@ -146,7 +146,7 @@ const Assets = () => {
         asset_ids: assetsToReport.map((a) => a.id),
       };
 
-      const res = await fetch("http://localhost:5000/generate-pdf", {
+      const res = await fetch("https://aivison-3.onrender.com/generate-pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
