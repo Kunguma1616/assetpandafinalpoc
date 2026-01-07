@@ -10,6 +10,10 @@
     "node": ">=18"
   },
 
+  "overrides": {
+    "rollup": "^4.24.0"
+  },
+
   "scripts": {
     "dev": "vite",
     "build": "vite build",
