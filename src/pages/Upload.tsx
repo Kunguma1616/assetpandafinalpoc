@@ -385,7 +385,7 @@ const Upload = () => {
   useEffect(() => {
     const fetchAssetTypes = async () => {
       try {
-        const res = await fetch('http://localhost:5000/get-asset-types');
+        const res = await fetch('https://aivison-3.onrender.com/get-asset-types');
         const json = await res.json();
         if (json && json.success && Array.isArray(json.asset_types)) {
           const fetched: {id:string;name:string}[] = json.asset_types;
@@ -418,7 +418,7 @@ const Upload = () => {
     }
     // Create in Salesforce via backend
     try {
-      const resp = await fetch('http://localhost:5000/create-asset-type', {
+      const resp = await fetch('https://aivison-3.onrender.com/create-asset-type', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: localName })
@@ -484,7 +484,7 @@ const Upload = () => {
       // Send account_id (empty = uses DEFAULT_ASSET_ACCOUNT_ID from .env)
       formData.append('account_id', '');
 
-      const response = await fetch('http://localhost:5000/upload-image', {
+      const response = await fetch('https://aivison-3.onrender.com/upload-image', {
         method: 'POST',
         body: formData
       });
